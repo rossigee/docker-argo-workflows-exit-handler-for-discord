@@ -89,7 +89,7 @@ func main() {
 	var embeds []DiscordEmbed
 
 	embed := DiscordEmbed{
-		Title:       fmt.Sprintf("Workflow `%s/%s` complete: %s", os.Getenv("ARGO_WORKFLOW_NAMESPACE"), os.Getenv("ARGO_WORKFLOW_NAME"), os.Getenv("ARGO_WORKFLOW_STATUS")),
+		Title:       fmt.Sprintf("Workflow `%s/%s`: %s", os.Getenv("ARGO_WORKFLOW_NAMESPACE"), os.Getenv("ARGO_WORKFLOW_NAME"), os.Getenv("ARGO_WORKFLOW_STATUS")),
 		Description: fmt.Sprintf("%d nodes failed", len(nodes)),
 		Color:       colourmap[workflowStatus],
 		Fields: []map[string]string{
