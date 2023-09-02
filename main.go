@@ -8,6 +8,20 @@ import (
 	"os"
 )
 
+const (
+	DISCORD_RED    = 0xFF0000
+	DISCORD_GREEN  = 0x00FF00
+	DISCORD_ORANGE = 0xFFA500
+)
+
+var (
+	colourmap = map[string]int{
+		"Succeeded": DISCORD_GREEN,
+		"Failed":    DISCORD_RED,
+		"Error":     DISCORD_ORANGE,
+	}
+)
+
 type NodeInfo struct {
 	DisplayName  string `json:"displayName"`
 	Message      string `json:"message"`
@@ -74,11 +88,22 @@ func main() {
 
 	var embeds []DiscordEmbed
 
+	embed := DiscordEmbed{
+		Title:       fmt.Sprintf("Workflow `%s/%s` complete: %s", os.Getenv("ARGO_WORKFLOW_NAMESPACE"), os.Getenv("ARGO_WORKFLOW_NAME"), os.Getenv("ARGO_WORKFLOW_STATUS")),
+		Description: fmt.Sprintf("%d nodes failed", len(nodes)),
+		Color:       colourmap[workflowStatus],
+		Fields: []map[string]string{
+			{"name": "UID", "value": os.Getenv("ARGO_WORKFLOW_UID")},
+			{"name": "Duration", "value": os.Getenv("ARGO_WORKFLOW_DURATION")},
+		},
+	}
+	embeds = append(embeds, embed)
+
 	for _, node := range nodes {
 		embed := DiscordEmbed{
 			Title:       "Node Failure Information",
 			Description: fmt.Sprintf("Node: %s", node.DisplayName),
-			Color:       16711680, // Bright red
+			Color:       DISCORD_RED,
 			Fields: []map[string]string{
 				{"name": "Message", "value": node.Message},
 				{"name": "Template", "value": node.TemplateName},
