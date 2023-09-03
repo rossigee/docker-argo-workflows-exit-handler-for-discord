@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"strconv"
+	"time"
 )
 
 const (
@@ -36,6 +38,22 @@ type DiscordEmbed struct {
 	Description string              `json:"description"`
 	Color       int                 `json:"color"`
 	Fields      []map[string]string `json:"fields"`
+}
+
+func secondsToHumanReadable(sec float64) string {
+	duration := time.Duration(sec) * time.Second
+	days := duration / (24 * time.Hour)
+	duration -= days * 24 * time.Hour
+
+	hours := duration / time.Hour
+	duration -= hours * time.Hour
+
+	minutes := duration / time.Minute
+	duration -= minutes * time.Minute
+
+	seconds := duration / time.Second
+
+	return fmt.Sprintf("%d days, %d hours, %d minutes, %d seconds", days, hours, minutes, seconds)
 }
 
 func prepareDiscordMessage(embeds []DiscordEmbed) ([]byte, error) {
@@ -82,6 +100,18 @@ func main() {
 		os.Exit(1)
 	}
 
+	workflowUrl := os.Getenv("ARGO_WORKFLOW_URL")
+	workflowDuration := os.Getenv("ARGO_WORKFLOW_DURATION")
+	if workflowDuration != "" {
+		sec, err := strconv.ParseFloat(workflowDuration, 64)
+		if err != nil {
+			workflowDuration = secondsToHumanReadable(sec)
+		}
+	}
+	if workflowDuration == "" {
+		workflowDuration = "N/A"
+	}
+
 	var nodes []NodeInfo
 	input := []byte(os.Getenv("ARGO_FAILED_NODES"))
 	json.Unmarshal(input, &nodes)
@@ -90,11 +120,11 @@ func main() {
 
 	embed := DiscordEmbed{
 		Title:       fmt.Sprintf("Workflow `%s/%s`: %s", os.Getenv("ARGO_WORKFLOW_NAMESPACE"), os.Getenv("ARGO_WORKFLOW_NAME"), os.Getenv("ARGO_WORKFLOW_STATUS")),
-		Description: fmt.Sprintf("%d nodes failed", len(nodes)),
+		Description: fmt.Sprintf("[%d nodes failed](%s)", len(nodes), workflowUrl),
 		Color:       colourmap[workflowStatus],
 		Fields: []map[string]string{
 			{"name": "UID", "value": os.Getenv("ARGO_WORKFLOW_UID")},
-			{"name": "Duration", "value": os.Getenv("ARGO_WORKFLOW_DURATION")},
+			{"name": "Duration", "value": workflowDuration},
 		},
 	}
 	embeds = append(embeds, embed)
