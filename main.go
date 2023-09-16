@@ -53,7 +53,16 @@ func secondsToHumanReadable(sec float64) string {
 
 	seconds := duration / time.Second
 
-	return fmt.Sprintf("%d days, %d hours, %d minutes, %d seconds", days, hours, minutes, seconds)
+	if days > 0 {
+		return fmt.Sprintf("%d days, %d hours, %d minutes, %d seconds", days, hours, minutes, seconds)
+	}
+	if hours > 0 {
+		return fmt.Sprintf("%d hours, %d minutes, %d seconds", hours, minutes, seconds)
+	}
+	if minutes > 0 {
+		return fmt.Sprintf("%d minutes, %d seconds", minutes, seconds)
+	}
+	return fmt.Sprintf("%d seconds", seconds)
 }
 
 func prepareDiscordMessage(embeds []DiscordEmbed) ([]byte, error) {
@@ -105,6 +114,9 @@ func main() {
 	if workflowDuration != "" {
 		sec, err := strconv.ParseFloat(workflowDuration, 64)
 		if err != nil {
+			fmt.Printf("Error parsing workflow duration: %s", err)
+			workflowDuration = "Unparsable"
+		} else {
 			workflowDuration = secondsToHumanReadable(sec)
 		}
 	}

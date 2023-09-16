@@ -12,7 +12,7 @@ func TestSecondsToHumanReadable(t *testing.T) {
 		expected string
 	}{
 		{86400, "1 days, 0 hours, 0 minutes, 0 seconds"},
-		{3661, "0 days, 1 hours, 1 minutes, 1 seconds"},
+		{3661, "1 hours, 1 minutes, 1 seconds"},
 	}
 
 	for _, test := range tests {
