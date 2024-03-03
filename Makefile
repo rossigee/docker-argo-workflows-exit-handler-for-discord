@@ -1,5 +1,5 @@
 IMAGE_NAME = argo-workflows-exit-handler-for-discord
-TAG = latest
+TAG = v0.3.0
 INTERNAL_REPO = harbor.golder.lan/rossigee
 PUBLIC_REPO = rossigee
 
