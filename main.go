@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"os"
 	"strconv"
@@ -76,11 +77,11 @@ func prepareDiscordMessage(embeds []DiscordEmbed) ([]byte, error) {
 	if payloadFile != "" {
 		file, err := os.Create(payloadFile)
 		if err != nil {
-			fmt.Printf("error creating payload file: %s", err)
+			return nil, fmt.Errorf("error creating payload file: %s", err)
 		}
 		_, err = file.Write(jsonPayload)
 		if err != nil {
-			fmt.Printf("error writing to payload file: %s", err)
+			return nil, fmt.Errorf("error writing to payload file: %s", err)
 		}
 	}
 
@@ -105,8 +106,7 @@ func main() {
 	workflowStatus := os.Getenv("ARGO_WORKFLOW_STATUS")
 
 	if webhookURL == "" || workflowStatus == "" {
-		fmt.Println("Required environment variables missing.")
-		os.Exit(1)
+		log.Fatalln("Required environment variables missing.")
 	}
 
 	workflowUrl := os.Getenv("ARGO_WORKFLOW_URL")
@@ -114,7 +114,7 @@ func main() {
 	if workflowDuration != "" {
 		sec, err := strconv.ParseFloat(workflowDuration, 64)
 		if err != nil {
-			fmt.Printf("Error parsing workflow duration: %s", err)
+			log.Fatalf("Error parsing workflow duration: %s\n", err)
 			workflowDuration = "Unparsable"
 		} else {
 			workflowDuration = secondsToHumanReadable(sec)
@@ -126,10 +126,21 @@ func main() {
 
 	var nodes []NodeInfo
 	input := []byte(os.Getenv("ARGO_FAILED_NODES"))
-	json.Unmarshal(input, &nodes)
+
+	// First, unmarshal the JSON string into a Go string
+	var jsonString string
+	err := json.Unmarshal(input, &jsonString)
+	if err != nil {
+		log.Fatalf("Error obtaining failed nodes data from environment variable: %v", err)
+	}
+
+	// Then, unmarshal the JSON array string into the slice of NodeInfo structs
+	err = json.Unmarshal([]byte(jsonString), &nodes)
+	if err != nil {
+		log.Fatalf("Error parsing failed nodes data from environment variable: %s\n", err)
+	}
 
 	var embeds []DiscordEmbed
-
 	embed := DiscordEmbed{
 		Title:       fmt.Sprintf("Workflow `%s/%s`: %s", os.Getenv("ARGO_WORKFLOW_NAMESPACE"), os.Getenv("ARGO_WORKFLOW_NAME"), os.Getenv("ARGO_WORKFLOW_STATUS")),
 		Description: fmt.Sprintf("[%d nodes failed](%s)", len(nodes), workflowUrl),
@@ -142,6 +153,9 @@ func main() {
 	embeds = append(embeds, embed)
 
 	for _, node := range nodes {
+		if node.Message == "" {
+			continue
+		}
 		embed := DiscordEmbed{
 			Title:       "Node Failure Information",
 			Description: fmt.Sprintf("Node: %s", node.DisplayName),
@@ -159,12 +173,10 @@ func main() {
 
 	payload, err := prepareDiscordMessage(embeds)
 	if err != nil {
-		fmt.Printf("Error preparing Discord message: %s", err)
-		os.Exit(1)
+		log.Fatalf("Error preparing Discord message: %s\n", err)
 	}
 	err = sendDiscordMessage(webhookURL, payload)
 	if err != nil {
-		fmt.Printf("Error sending Discord message: %s", err)
-		os.Exit(1)
+		log.Fatalf("Error sending Discord message: %s\n", err)
 	}
 }
